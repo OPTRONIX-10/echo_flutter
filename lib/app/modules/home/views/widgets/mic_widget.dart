@@ -21,9 +21,9 @@ class MicWidget extends GetView<HomeController> {
             width: 200,
             height: 200,
             repeat: true,
-            animate: controller.isStreaming.value,
+            animate: controller.isListening.value,
           ),
-          Text(controller.liveTranscription.value, textAlign: TextAlign.center),
+          Text(controller.transcription.value, textAlign: TextAlign.center),
           AvatarGlow(
             glowColor: tertiaryColor,
             glowCount: 3,
@@ -37,12 +37,12 @@ class MicWidget extends GetView<HomeController> {
               child: IconButton(
                 iconSize: 72,
                 icon: Icon(
-                  controller.isStreaming.value ? Icons.stop_circle : Icons.mic,
+                  controller.isListening.value ? Icons.stop_circle : Icons.mic,
                   color: primaryColor,
                 ),
-                onPressed: controller.isStreaming.value
-                    ? controller.stopGroqPipeline
-                    : controller.startGroqPipeline,
+                onPressed: controller.isListening.value
+                    ? controller.stopListening
+                    : controller.startListening,
               ),
             ),
           ),

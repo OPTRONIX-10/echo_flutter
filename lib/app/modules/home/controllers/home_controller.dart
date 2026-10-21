@@ -1,92 +1,70 @@
 import 'dart:async';
-import 'dart:typed_data';
-
 import 'package:get/get.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:record/record.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 class HomeController extends GetxController {
-  final AudioRecorder _audioRecorder = AudioRecorder();
-  WebSocketChannel? _channel;
-  StreamSubscription<Uint8List>? _audioSubscription;
 
-  final isStreaming = false.obs;
-  final liveTranscription = 'Tap mic to speak...'.obs;
+  final SpeechToText _speechToText = SpeechToText();
+  bool _isSpeechAvailable = false;
+  final isListening = false.obs;
+  final transcription = 'Tap the microphone to start recording'.obs;
 
-  Future<void> startGroqPipeline() async {
-    if (isStreaming.value) {
-      return;
-    }
+  @override
+  void onInit() {
+    super.onInit();
+    _initializeSpeech();
+  }
 
-    if (!await _audioRecorder.hasPermission()) {
-      final status = await Permission.microphone.request();
-      if (status != PermissionStatus.granted) {
-        _showError('Microphone permission denied');
-        return;
-      }
-    }
+  Future<void> _initializeSpeech() async {
+    _isSpeechAvailable = await _speechToText.initialize(
+      onStatus: (status) {
+        Get.snackbar('Speech', status);
+        if (status == 'done') {
+          stopListening();
+        }
+      },
+      onError: (error) {
+        Get.snackbar('Speech error', error.errorMsg);
+        stopListening();
+      },
+    );
+  }
 
-    try {
-      _channel = WebSocketChannel.connect(
-        Uri.parse('ws://YOUR_BACKEND_IP:8000/ws/stream'),
-      );
-      _channel!.stream.listen(
-        (message) => liveTranscription.value = message.toString(),
-        onError: (Object error, StackTrace stackTrace) {
-          _showError('Unable to receive transcription: $error');
-          stopGroqPipeline();
+  void startListening() async {
+    if (_isSpeechAvailable) {
+      await _speechToText.listen(
+        onResult: (result) {
+          transcription.value = result.recognizedWords;
         },
-      );
-
-      final audioStream = await _audioRecorder.startStream(
-        const RecordConfig(
-          encoder: AudioEncoder.pcm16bits,
-          sampleRate: 16000,
-          numChannels: 1,
+        listenOptions: SpeechListenOptions(
+          pauseFor: const Duration(seconds: 10),
+          listenFor: const Duration(seconds: 60),
+          listenMode: ListenMode.dictation,
+          partialResults: true,
+          onDevice: false,
+          localeId: 'en_IN',
         ),
       );
-
-      isStreaming.value = true;
-      liveTranscription.value = 'Listening...';
-      _audioSubscription = audioStream.listen((Uint8List rawChunk) {
-        if (isStreaming.value && _channel != null) {
-          _channel!.sink.add(rawChunk);
-        }
-      });
-    } on Object catch (error, stackTrace) {
-      _showError('Unable to start listening: $error');
-      await _cleanupPipeline();
-      Get.log('$error\n$stackTrace');
+      isListening.value = true;
+    } else {
+      Get.snackbar('Error', 'Speech recognition not available');
     }
   }
 
-  Future<void> stopGroqPipeline() async {
-    if (!isStreaming.value && _audioSubscription == null && _channel == null) {
-      return;
-    }
-
-    isStreaming.value = false;
-    await _cleanupPipeline();
-  }
-
-  Future<void> _cleanupPipeline() async {
-    await _audioSubscription?.cancel();
-    _audioSubscription = null;
-    await _audioRecorder.stop();
-    await _channel?.sink.close();
-    _channel = null;
-  }
-
-  void _showError(String message) {
-    liveTranscription.value = message;
-    Get.snackbar('Voice input error', message);
+  void stopListening() async {
+    await _speechToText.stop();
+    isListening.value = false;
+    transcription.value = 'Tap the microphone to start recording';
   }
 
   @override
-  void onClose() {
-    _cleanupPipeline();
-    _audioRecorder.dispose();
+  void onClose() async {
+    // _cleanupPipeline();
+    // _audioRecorder.dispose();
+    await _speechToText.stop();
+    isListening.value = false;
+    transcription.value = 'Tap the microphone to start recording';
+
     super.onClose();
   }
 }
