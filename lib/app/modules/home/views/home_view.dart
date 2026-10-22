@@ -12,7 +12,22 @@ class HomeView extends GetView<HomeController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: primaryColor,
-      body: SafeArea(child: MicWidget()),
+      appBar: AppBar(
+        title: const Text(
+          'ECHO',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: primaryColor,
+      ),
+      body: SafeArea(child: Center(child: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: MicWidget(),
+      ))),
     );
   }
 }

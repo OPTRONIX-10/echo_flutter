@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 class HomeController extends GetxController {
-
   final SpeechToText _speechToText = SpeechToText();
   bool _isSpeechAvailable = false;
   final isListening = false.obs;
@@ -18,34 +17,42 @@ class HomeController extends GetxController {
   Future<void> _initializeSpeech() async {
     _isSpeechAvailable = await _speechToText.initialize(
       onStatus: (status) {
-        Get.snackbar('Speech', status);
-        if (status == 'done') {
-          stopListening();
+        if (status == 'listening') {
+          isListening.value = true;
+        } else if (status == 'done' || status == 'notListening') {
+          // The plugin has already ended this session. Calling stop() here
+          // starts another platform stop request and can end a new session.
+          isListening.value = false;
         }
       },
       onError: (error) {
         Get.snackbar('Speech error', error.errorMsg);
-        stopListening();
+        isListening.value = false;
       },
     );
   }
 
   void startListening() async {
     if (_isSpeechAvailable) {
-      await _speechToText.listen(
-        onResult: (result) {
-          transcription.value = result.recognizedWords;
-        },
-        listenOptions: SpeechListenOptions(
-          pauseFor: const Duration(seconds: 10),
-          listenFor: const Duration(seconds: 60),
-          listenMode: ListenMode.dictation,
-          partialResults: true,
-          onDevice: false,
-          localeId: 'en_IN',
-        ),
-      );
       isListening.value = true;
+      try {
+        await _speechToText.listen(
+          onResult: (result) {
+            transcription.value = result.recognizedWords;
+          },
+          listenOptions: SpeechListenOptions(
+            pauseFor: const Duration(seconds: 10),
+            listenFor: const Duration(seconds: 60),
+            listenMode: ListenMode.dictation,
+            partialResults: true,
+            onDevice: false,
+            localeId: 'en_IN',
+          ),
+        );
+      } on Exception catch (error) {
+        isListening.value = false;
+        Get.snackbar('Speech error', error.toString());
+      }
     } else {
       Get.snackbar('Error', 'Speech recognition not available');
     }

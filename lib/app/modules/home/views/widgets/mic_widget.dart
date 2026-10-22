@@ -13,22 +13,21 @@ class MicWidget extends GetView<HomeController> {
   Widget build(BuildContext context) {
     return Obx(
       () => Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        spacing: 50,
         children: [
           Lottie.asset(
             'assets/voice_lottie.json',
-            width: 200,
+            width: double.infinity,
             height: 200,
             repeat: true,
             animate: controller.isListening.value,
           ),
-          Text(controller.transcription.value, textAlign: TextAlign.center),
           AvatarGlow(
             glowColor: tertiaryColor,
             glowCount: 3,
-            glowRadiusFactor: 0.2,
+            glowRadiusFactor: 0.5,
             child: Container(
+              width: 150,
+              height: 150,
               decoration: const BoxDecoration(
                 color: secondaryColor,
                 shape: BoxShape.circle,
@@ -43,6 +42,27 @@ class MicWidget extends GetView<HomeController> {
                 onPressed: controller.isListening.value
                     ? controller.stopListening
                     : controller.startListening,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: neutralColor,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: primaryColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                controller.transcription.value,
+                textAlign: TextAlign.center,
+                maxLines: 5,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 18, color: secondaryColor),
               ),
             ),
           ),
