@@ -11,25 +11,20 @@ class MicWidget extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
+    final height = MediaQuery.of(context).size.height;
     return Obx(
       () => Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Lottie.asset(
-            'assets/voice_lottie.json',
-            width: double.infinity,
-            height: 200,
-            repeat: true,
-            animate: controller.isListening.value,
-          ),
           AvatarGlow(
             glowColor: tertiaryColor,
             glowCount: 3,
-            glowRadiusFactor: 0.5,
+            glowRadiusFactor: 0.2,
             child: Container(
               width: 150,
               height: 150,
               decoration: const BoxDecoration(
-                color: secondaryColor,
+                color: neutralColor,
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
@@ -37,7 +32,7 @@ class MicWidget extends GetView<HomeController> {
                 iconSize: 72,
                 icon: Icon(
                   controller.isListening.value ? Icons.stop_circle : Icons.mic,
-                  color: primaryColor,
+                  color: secondaryColor,
                 ),
                 onPressed: controller.isListening.value
                     ? controller.stopListening
@@ -45,26 +40,13 @@ class MicWidget extends GetView<HomeController> {
               ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: neutralColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: primaryColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                controller.transcription.value,
-                textAlign: TextAlign.center,
-                maxLines: 5,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 18, color: secondaryColor),
-              ),
-            ),
+          SizedBox(height: height * 0.05),
+          Lottie.asset(
+            'assets/voice_lottie.json',
+            width: double.infinity,
+            height: 200,
+            repeat: true,
+            animate: controller.isListening.value,
           ),
         ],
       ),

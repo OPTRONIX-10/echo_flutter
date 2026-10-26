@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
@@ -6,12 +8,51 @@ class HomeController extends GetxController {
   final SpeechToText _speechToText = SpeechToText();
   bool _isSpeechAvailable = false;
   final isListening = false.obs;
-  final transcription = 'Tap the microphone to start recording'.obs;
+  final textController = TextEditingController();
 
   @override
   void onInit() {
     super.onInit();
+    handleLocationPermission();
     _initializeSpeech();
+  }
+
+  Future handleLocationPermission() async {
+    LocationPermission permission;
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        Get.snackbar(
+          'Location permissions are denied',
+          'Please allow location permissions to use this feature.',
+        );
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      // Permissions are denied forever, handle appropriately.
+      Get.snackbar(
+        'Location permissions are permanently denied',
+        'We cannot request permissions.',
+      );
+      return;
+    }
+  }
+
+  Future<Position> getCurrentPosition() async {
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to get current position: $e');
+      rethrow;
+    }
   }
 
   Future<void> _initializeSpeech() async {
@@ -38,7 +79,7 @@ class HomeController extends GetxController {
       try {
         await _speechToText.listen(
           onResult: (result) {
-            transcription.value = result.recognizedWords;
+            textController.text = result.recognizedWords;
           },
           listenOptions: SpeechListenOptions(
             pauseFor: const Duration(seconds: 10),
@@ -61,7 +102,6 @@ class HomeController extends GetxController {
   void stopListening() async {
     await _speechToText.stop();
     isListening.value = false;
-    transcription.value = 'Tap the microphone to start recording';
   }
 
   @override
@@ -70,8 +110,7 @@ class HomeController extends GetxController {
     // _audioRecorder.dispose();
     await _speechToText.stop();
     isListening.value = false;
-    transcription.value = 'Tap the microphone to start recording';
-
+    textController.dispose();
     super.onClose();
   }
 }
