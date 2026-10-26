@@ -1,5 +1,7 @@
 import 'package:get/get.dart';
 
+import '../modules/calling_service/bindings/calling_service_binding.dart';
+import '../modules/calling_service/views/calling_service_view.dart';
 import '../modules/home/bindings/home_binding.dart';
 import '../modules/home/views/home_view.dart';
 import '../modules/vendor/bindings/vendor_binding.dart';
@@ -10,7 +12,7 @@ part 'app_routes.dart';
 class AppPages {
   AppPages._();
 
-  static const INITIAL = Routes.HOME;
+  static const INITIAL = Routes.CALLING_SERVICE;
 
   static final routes = [
     GetPage(
@@ -22,6 +24,11 @@ class AppPages {
       name: _Paths.VENDOR,
       page: () => const VendorView(),
       binding: VendorBinding(),
+    ),
+    GetPage(
+      name: _Paths.CALLING_SERVICE,
+      page: () => const CallingServiceView(),
+      binding: CallingServiceBinding(),
     ),
   ];
 }
