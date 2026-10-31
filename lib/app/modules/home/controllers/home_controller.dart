@@ -1,4 +1,9 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
+import 'package:echo_flutter/app/constants/backend_url.dart';
+import 'package:echo_flutter/app/modules/home/controllers/models/places_model.dart';
+import 'package:echo_flutter/app/modules/vendor/controllers/vendor_controller.dart';
+import 'package:echo_flutter/app/modules/vendor/views/vendor_view.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
@@ -9,6 +14,8 @@ class HomeController extends GetxController {
   bool _isSpeechAvailable = false;
   final isListening = false.obs;
   final textController = TextEditingController();
+  final dio = Dio();
+  final isLoading = false.obs;
 
   @override
   void onInit() {
@@ -56,13 +63,19 @@ class HomeController extends GetxController {
   }
 
   Future<void> _initializeSpeech() async {
+    final location = await getCurrentPosition();
     _isSpeechAvailable = await _speechToText.initialize(
-      onStatus: (status) {
+      onStatus: (status) async {
         if (status == 'listening') {
           isListening.value = true;
-        } else if (status == 'done' || status == 'notListening') {
-          // The plugin has already ended this session. Calling stop() here
-          // starts another platform stop request and can end a new session.
+        } else if (status == 'done') {
+          isListening.value = false;
+          await callPlacesApi(
+            textController.text,
+            location.latitude,
+            location.longitude,
+          );
+        } else if (status == 'notListening') {
           isListening.value = false;
         }
       },
@@ -102,6 +115,41 @@ class HomeController extends GetxController {
   void stopListening() async {
     await _speechToText.stop();
     isListening.value = false;
+  }
+
+  Future<List<PlacesModel>> callPlacesApi(
+    String textQuery,
+    double latitude,
+    double longitude,
+  ) async {
+    try {
+      isLoading.value = true;
+      const url = '$backendUrl/places/search';
+      final response = await dio.get(
+        url,
+        queryParameters: {
+          'text_query': textQuery,
+          'latitude': latitude,
+          'longitude': longitude,
+        },
+      );
+
+      List<PlacesModel> places = (response.data as List)
+          .map((placeJson) => PlacesModel.fromJson(placeJson))
+          .toList();
+      isLoading.value = false;
+      // route to venodr list page with the places data
+      Get.to(
+        () => VendorView(),
+        binding: BindingsBuilder<VendorController>(() {
+          Get.put(VendorController(places: places, textQuery:textController.text));
+        }),
+      );
+      return places;
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to call Places API: $e');
+      rethrow;
+    }
   }
 
   @override

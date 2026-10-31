@@ -6,7 +6,7 @@ class CallingServiceBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut<CallingServiceController>(
-      () => CallingServiceController(),
+      () => CallingServiceController(messages: []),
     );
   }
 }

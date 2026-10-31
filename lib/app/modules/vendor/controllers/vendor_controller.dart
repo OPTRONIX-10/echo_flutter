@@ -1,102 +1,117 @@
+import 'package:dio/dio.dart';
+import 'package:echo_flutter/app/constants/agent_ids.dart';
+import 'package:echo_flutter/app/constants/backend_url.dart';
+import 'package:echo_flutter/app/modules/calling_service/controllers/calling_service_controller.dart';
+import 'package:echo_flutter/app/modules/calling_service/views/calling_service_view.dart';
+import 'package:echo_flutter/app/modules/home/controllers/models/llm_models.dart';
+import 'package:echo_flutter/app/modules/home/controllers/models/places_model.dart';
+import 'package:echo_flutter/app/modules/vendor/controllers/models/agent_model.dart';
 import 'package:get/get.dart';
-import 'package:url_launcher/url_launcher.dart';
-
-class Vendor {
-  const Vendor({
-    required this.title,
-    required this.address,
-    required this.contactNumber,
-  });
-
-  final String title;
-  final String address;
-  final String contactNumber;
-}
 
 class VendorController extends GetxController {
-  final vendors = const [
-    Vendor(
-      title: 'Sharma Electricals',
-      address: '12 MG Road, Bengaluru',
-      contactNumber: '+91 98765 43210',
-    ),
-    Vendor(
-      title: 'Patel Hardware',
-      address: '45 Market Street, Ahmedabad',
-      contactNumber: '+91 98765 12345',
-    ),
-    Vendor(
-      title: 'Kumar Supplies',
-      address: '8 Station Road, Chennai',
-      contactNumber: '+91 91234 56789',
-    ),
-    Vendor(
-      title: 'Modern Traders',
-      address: '27 Park Avenue, Hyderabad',
-      contactNumber: '+91 99887 76655',
-    ),
-    Vendor(
-      title: 'Modern Traders',
-      address: '27 Park Avenue, Hyderabad',
-      contactNumber: '+91 99887 76655',
-    ),
-    Vendor(
-      title: 'Modern Traders',
-      address: '27 Park Avenue, Hyderabad',
-      contactNumber: '+91 99887 76655',
-    ),
-    Vendor(
-      title: 'Modern Traders',
-      address: '27 Park Avenue, Hyderabad',
-      contactNumber: '+91 99887 76655',
-    ),
-    Vendor(
-      title: 'Modern Traders',
-      address: '27 Park Avenue, Hyderabad',
-      contactNumber: '+91 99887 76655',
-    ),
-    Vendor(
-      title: 'Modern Traders',
-      address: '27 Park Avenue, Hyderabad',
-      contactNumber: '+91 99887 76655',
-    ),
-    Vendor(
-      title: 'Modern Traders',
-      address: '27 Park Avenue, Hyderabad',
-      contactNumber: '+91 99887 76655',
-    ),
-  ];
+  VendorController({required this.places, required this.textQuery});
+  final List<PlacesModel> places;
+  final String textQuery;
+  final dio = Dio();
 
-  final selectedVendors = <int>{}.obs;
+  final selectedVendors = <String, String>{}.obs;
+  final isLoading = false.obs;
 
-  void toggleSelection(int index, bool selected) {
+  void toggleSelection(String id, String phoneNumber, bool selected) {
     if (selected) {
-      selectedVendors.add(index);
+      selectedVendors[id] = phoneNumber;
     } else {
-      selectedVendors.remove(index);
+      selectedVendors.remove(id);
     }
   }
 
-  Future<void> callSelectedVendor() async {
+  Future<LlmResponseModel> callLlmApi({required String userMessage}) async {
+    try {
+      const url = '$backendUrl/llm/response';
+      final response = await dio.get(
+        url,
+        queryParameters: {'message': userMessage},
+      );
+      return LlmResponseModel(
+        serviceDescription: response.data['service_description'],
+        serviceCategory: response.data['service_category'],
+      );
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to call LLM API: $e');
+      rethrow;
+    }
+  }
+
+  Future<AgentCallModel> callAgentApi({
+    required AgentCallRequestModel model,
+    required String agentId,
+    required String providerPhoneNumber,
+  }) async {
+    try {
+      const url = '$backendUrl/bolna_agent/call';
+      final response = await dio.post(
+        url,
+        data: {
+          'agent_id': agentId,
+          'recipient_phone_number': providerPhoneNumber,
+          'user_data': model.toJson(),
+        },
+      );
+      return AgentCallModel(
+        message: response.data['message'],
+        status: response.data['status'],
+        executionId: response.data['execution_id'],
+      );
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to call Agent API: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<AgentCallModel>> callSelectedVendor() async {
     if (selectedVendors.isEmpty) {
       Get.snackbar('No vendor selected', 'Select a vendor before calling.');
-      return;
+      return [];
     }
+    isLoading.value = true;
+    final response = await callLlmApi(userMessage: textQuery);
 
-    await callVendor(vendors[selectedVendors.first]);
-  }
+    List demoPhoneNumbers = ['+918921787594', '+918078113354'];
+    final selectedVendorsWithPhoneNumbers = <String, String>{};
+    for (int i = 0; i < selectedVendors.length; i++) {
+      selectedVendorsWithPhoneNumbers[selectedVendors.keys.elementAt(i)] =
+          demoPhoneNumbers[i];
+    }
+    final futures = selectedVendorsWithPhoneNumbers.entries.map((vendor) async {
+      final vendorId = vendor.key;
 
-  Future<void> callVendor(Vendor vendor) async {
-    final phoneUri = Uri(
-      scheme: 'tel',
-      path: vendor.contactNumber.replaceAll(RegExp(r'[^\d+]'), ''),
-    );
-
-    if (!await launchUrl(phoneUri)) {
-      Get.snackbar(
-        'Unable to call vendor',
-        'No phone application is available on this device.',
+      final agentRequestModel = AgentCallRequestModel(
+        customerName: 'Abhishek',
+        customerPhoneNumber: '+91892187594',
+        customerLocation: 'Venomeny',
+        serviceType: response.serviceCategory,
+        serviceDescription: response.serviceDescription,
+        vendorName: places.firstWhere((place) => place.id == vendorId).name,
       );
-    }
+
+      final agentResponse = await callAgentApi(
+        model: agentRequestModel,
+        agentId: echoAgentId,
+        providerPhoneNumber: vendor.value,
+      );
+
+      return agentResponse;
+    });
+
+    final messages = await Future.wait(futures);
+
+    isLoading.value = false;
+    Get.to(
+      () => CallingServiceView(),
+      binding: BindingsBuilder(() {
+        Get.put(CallingServiceController(messages: messages));
+      }),
+    );
+    return messages;
   }
 }

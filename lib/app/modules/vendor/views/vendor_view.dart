@@ -1,3 +1,4 @@
+import 'package:echo_flutter/app/modules/home/controllers/models/places_model.dart';
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
@@ -10,6 +11,7 @@ class VendorView extends GetView<VendorController> {
 
   @override
   Widget build(BuildContext context) {
+    final List<PlacesModel> places = controller.places;
     return Scaffold(
       backgroundColor: primaryColor,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -23,22 +25,30 @@ class VendorView extends GetView<VendorController> {
           ),
         ),
         centerTitle: true,
-        backgroundColor: neutralColor ,
+        backgroundColor: neutralColor,
       ),
       body: SafeArea(
         child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.79,
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: controller.vendors.length,
+            itemCount: places.length,
             itemBuilder: (context, index) {
-              final vendor = controller.vendors[index];
+              final vendor = places[index];
 
               return Obx(() {
-                final isSelected = controller.selectedVendors.contains(index);
+                final isSelected = controller.selectedVendors.containsKey(
+                  vendor.id,
+                );
+                final phoneNumber =
+                    controller.selectedVendors[vendor.id] ?? 'Unknown';
 
                 return GestureDetector(
-                  onTap: () => controller.toggleSelection(index, !isSelected),
+                  onTap: () => controller.toggleSelection(
+                    vendor.id,
+                    phoneNumber,
+                    !isSelected,
+                  ),
                   child: Card(
                     color: secondaryColor,
                     elevation: 2,
@@ -52,7 +62,7 @@ class VendorView extends GetView<VendorController> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  vendor.title,
+                                  vendor.name,
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -64,8 +74,12 @@ class VendorView extends GetView<VendorController> {
                                 value: isSelected,
                                 checkColor: secondaryColor,
                                 activeColor: primaryColor,
-                                onChanged: (value) => controller
-                                    .toggleSelection(index, value ?? false),
+                                onChanged: (value) =>
+                                    controller.toggleSelection(
+                                      vendor.id,
+                                      phoneNumber,
+                                      value ?? false,
+                                    ),
                               ),
                             ],
                           ),
@@ -78,7 +92,7 @@ class VendorView extends GetView<VendorController> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            vendor.contactNumber,
+                            vendor.contactNumber ?? 'Unknown',
                             style: const TextStyle(color: primaryColor),
                           ),
                         ],
@@ -99,10 +113,12 @@ class VendorView extends GetView<VendorController> {
           child: TextButton.icon(
             onPressed: controller.callSelectedVendor,
             icon: const Icon(Icons.call, color: secondaryColor),
-            label: const Text(
-              'Initiate Call',
-              style: TextStyle(color: secondaryColor),
-            ),
+            label: controller.isLoading.value
+                ? CircularProgressIndicator(color: secondaryColor)
+                : const Text(
+                    'Initiate Call',
+                    style: TextStyle(color: secondaryColor),
+                  ),
             style: TextButton.styleFrom(
               backgroundColor: neutralColor,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

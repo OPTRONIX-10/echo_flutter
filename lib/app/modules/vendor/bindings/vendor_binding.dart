@@ -6,7 +6,7 @@ class VendorBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut<VendorController>(
-      () => VendorController(),
+      () => VendorController(places: [], textQuery: ''),
     );
   }
 }

@@ -29,7 +29,9 @@ class HomeView extends GetView<HomeController> {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(20.0),
-            child: MicWidget(),
+            child: controller.isLoading.value
+                ? CircularProgressIndicator(color: secondaryColor)
+                : MicWidget(),
           ),
         ),
       ),

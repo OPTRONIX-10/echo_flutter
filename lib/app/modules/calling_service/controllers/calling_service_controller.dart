@@ -1,4 +1,7 @@
+import 'package:dio/dio.dart';
+import 'package:echo_flutter/app/modules/vendor/controllers/models/agent_model.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 enum CallStatus { dialing, talking, complete }
 
@@ -17,6 +20,9 @@ class CallSession {
 }
 
 class CallingServiceController extends GetxController {
+  CallingServiceController({required this.messages});
+  final List<AgentCallModel> messages; 
+  final dio = Dio();
   final callSessions = <CallSession>[
     CallSession(
       title: 'Sharma Electricals',
@@ -67,4 +73,20 @@ class CallingServiceController extends GetxController {
       vendorTranscription: session.vendorTranscription,
     );
   }
+
+   Future<void> callVendor(String phoneNumber) async {
+    final phoneUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber.replaceAll(RegExp(r'[^\d+]'), ''),
+    );
+
+    if (!await launchUrl(phoneUri)) {
+      Get.snackbar(
+        'Unable to call vendor',
+        'No phone application is available on this device.',
+      );
+    }
+  }
+
+ 
 }
