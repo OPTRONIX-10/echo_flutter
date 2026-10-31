@@ -46,7 +46,7 @@ class VendorView extends GetView<VendorController> {
                 return GestureDetector(
                   onTap: () => controller.toggleSelection(
                     vendor.id,
-                    phoneNumber,
+                    vendor,
                     !isSelected,
                   ),
                   child: Card(
@@ -77,7 +77,7 @@ class VendorView extends GetView<VendorController> {
                                 onChanged: (value) =>
                                     controller.toggleSelection(
                                       vendor.id,
-                                      phoneNumber,
+                                      vendor,
                                       value ?? false,
                                     ),
                               ),

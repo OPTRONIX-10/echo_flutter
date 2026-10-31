@@ -16,12 +16,12 @@ class VendorController extends GetxController {
   final String textQuery;
   final dio = Dio();
 
-  final selectedVendors = <String, String>{}.obs;
+  final selectedVendors = <String, PlacesModel>{}.obs;
   final isLoading = false.obs;
 
-  void toggleSelection(String id, String phoneNumber, bool selected) {
+  void toggleSelection(String id, PlacesModel model, bool selected) {
     if (selected) {
-      selectedVendors[id] = phoneNumber;
+      selectedVendors[id] = model;
     } else {
       selectedVendors.remove(id);
     }
@@ -93,7 +93,7 @@ class VendorController extends GetxController {
     isLoading.value = true;
     final response = await callLlmApi(userMessage: textQuery);
 
-    List demoPhoneNumbers = ['+918921787594', '+918078113354'];
+    List demoPhoneNumbers = ['+918921787594', '+918921787594'];
     final selectedVendorsWithPhoneNumbers = <String, String>{};
     for (int i = 0; i < selectedVendors.length; i++) {
       selectedVendorsWithPhoneNumbers[selectedVendors.keys.elementAt(i)] =
@@ -127,7 +127,12 @@ class VendorController extends GetxController {
     Get.to(
       () => CallingServiceView(),
       binding: BindingsBuilder(() {
-        Get.put(CallingServiceController(messages: messages));
+        Get.put(
+          CallingServiceController(
+            messages: messages,
+            selectedVendors: selectedVendors,
+          ),
+        );
       }),
     );
     return messages;
